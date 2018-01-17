@@ -29,9 +29,10 @@
 #include "Version.h"
 #include "Configuration.h"
 #include "Conditionals_LCD.h"
+#include "tmc_macros.h"
 #include "Configuration_adv.h"
 #include "pins.h"
-#if !defined(USBCON) && !defined(UARM_SWIFT)
+#ifndef USBCON
   #define HardwareSerial_h // trick to disable the standard HWserial
 #endif
 #include "Arduino.h"

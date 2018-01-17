@@ -33,10 +33,29 @@
 #  5. Type "make upload", reset your Arduino board, and press enter to
 #     upload your program to the Arduino board.
 #
-# Note that all settings are set with ?=, this means you can override them
-# from the commandline with "make HARDWARE_MOTHERBOARD=71" for example
+# Note that all settings at the top of this file can be overriden from
+# the command line with, for example, "make HARDWARE_MOTHERBOARD=71"
+#
+# To compile for RAMPS (atmega2560) with Arduino 1.6.9 at root/arduino you would use...
+#
+#   make ARDUINO_VERSION=10609 AVR_TOOLS_PATH=/root/arduino/hardware/tools/avr/bin/ \
+#   HARDWARE_MOTHERBOARD=33 ARDUINO_INSTALL_DIR=/root/arduino
+#
+# To compile and upload simply add "upload" to the end of the line...
+#
+#   make ARDUINO_VERSION=10609 AVR_TOOLS_PATH=/root/arduino/hardware/tools/avr/bin/ \
+#   HARDWARE_MOTHERBOARD=33 ARDUINO_INSTALL_DIR=/root/arduino upload
+#
+# If uploading doesn't work try adding the parameter "AVRDUDE_PROGRAMMER=wiring" or
+# start upload manually (using stk500) like so:
+#
+#   avrdude -C /root/arduino/hardware/tools/avr/etc/avrdude.conf -v -p m2560 -c stk500 \
+#   -U flash:w:applet/Marlin.hex:i -P /dev/ttyUSB0
+#
+# Or, try disconnecting USB to power down and then reconnecting before running avrdude.
+#
 
-# This defined the board you are compiling for (see boards.h for the options)
+# This defines the board to compile for (see boards.h for your board's ID)
 HARDWARE_MOTHERBOARD ?= 11
 
 # Arduino source install directory, and version number
@@ -50,7 +69,7 @@ AVR_TOOLS_PATH ?=
 #Programmer configuration
 UPLOAD_RATE        ?= 57600
 AVRDUDE_PROGRAMMER ?= arduino
-# on most linuxes this will be /dev/ttyACM0 or /dev/ttyACM1 
+# on most linuxes this will be /dev/ttyACM0 or /dev/ttyACM1
 UPLOAD_PORT        ?= /dev/ttyUSB0
 
 #Directory used to build files in, contains all the build files, from object files to the final hex file
@@ -62,6 +81,13 @@ LIQUID_TWI2        ?= 0
 
 # this defines if Wire is needed
 WIRE               ?= 0
+
+# this defines if U8GLIB is needed (may require RELOC_WORKAROUND)
+U8GLIB             ?= 1
+
+# this defines whether to add a workaround for the avr-gcc relocation bug
+#	  https://www.stix.id.au/wiki/AVR_relocation_truncations_workaround
+RELOC_WORKAROUND   ?= 1
 
 ############################################################################
 # Below here nothing should be changed...
@@ -228,16 +254,6 @@ F_CPU ?= 16000000
 # Libraries, the "hardware variant" are for boards
 # that derives from that, and their source are present in
 # the main Marlin source directory
-ifeq ($(HARDWARE_VARIANT), $(filter $(HARDWARE_VARIANT),arduino Sanguino))
-HARDWARE_DIR = $(ARDUINO_INSTALL_DIR)/hardware
-else
-ifeq ($(shell [ $(ARDUINO_VERSION) -ge 100 ] && echo true), true)
-HARDWARE_DIR = ../ArduinoAddons/Arduino_1.x.x
-else
-HARDWARE_DIR = ../ArduinoAddons/Arduino_0.xx
-endif
-endif
-HARDWARE_SRC = $(HARDWARE_DIR)/marlin/avr/cores/arduino
 
 TARGET = $(notdir $(CURDIR))
 
@@ -247,10 +263,11 @@ TARGET = $(notdir $(CURDIR))
 
 VPATH = .
 VPATH += $(BUILD_DIR)
-VPATH += $(HARDWARE_SRC)
-ifeq ($(HARDWARE_VARIANT), $(filter $(HARDWARE_VARIANT),arduino Teensy Sanguino))
-VPATH += $(HARDWARE_DIR)/marlin/avr/libraries/LiquidCrystal/src
-VPATH += $(HARDWARE_DIR)/marlin/avr/libraries/SPI
+VPATH += $(ARDUINO_INSTALL_DIR)/hardware/arduino/avr/cores/arduino
+
+VPATH += $(ARDUINO_INSTALL_DIR)/hardware/arduino/avr/libraries/SPI
+VPATH += $(ARDUINO_INSTALL_DIR)/hardware/arduino/avr/libraries/SPI/src
+VPATH += $(ARDUINO_INSTALL_DIR)/libraries/LiquidCrystal/src
 ifeq ($(LIQUID_TWI2), 1)
 VPATH += $(ARDUINO_INSTALL_DIR)/libraries/Wire
 VPATH += $(ARDUINO_INSTALL_DIR)/libraries/Wire/utility
@@ -260,22 +277,17 @@ ifeq ($(WIRE), 1)
 VPATH += $(ARDUINO_INSTALL_DIR)/libraries/Wire
 VPATH += $(ARDUINO_INSTALL_DIR)/libraries/Wire/utility
 endif
-else
-VPATH += $(HARDWARE_DIR)/libraries/LiquidCrystal
-VPATH += $(HARDWARE_DIR)/libraries/SPI
-ifeq ($(LIQUID_TWI2), 1)
-VPATH += $(HARDWARE_DIR)/libraries/Wire
-VPATH += $(HARDWARE_DIR)/libraries/Wire/utility
-VPATH += $(HARDWARE_DIR)/libraries/LiquidTWI2
+ifeq ($(NEOPIXEL), 1)
+VPATH += $(ARDUINO_INSTALL_DIR)/libraries/Adafruit_NeoPixel
 endif
-ifeq ($(WIRE), 1)
-VPATH += $(HARDWARE_DIR)/libraries/Wire
-VPATH += $(HARDWARE_DIR)/libraries/Wire/utility
+ifeq ($(U8GLIB), 1)
+VPATH += $(ARDUINO_INSTALL_DIR)/libraries/U8glib
+VPATH += $(ARDUINO_INSTALL_DIR)/libraries/U8glib/utility
 endif
-endif
+
 ifeq ($(HARDWARE_VARIANT), arduino)
 HARDWARE_SUB_VARIANT ?= mega
-VPATH += $(ARDUINO_INSTALL_DIR)/hardware/arduino/variants/$(HARDWARE_SUB_VARIANT)
+VPATH += $(ARDUINO_INSTALL_DIR)/hardware/arduino/avr/variants/$(HARDWARE_SUB_VARIANT)
 else
 ifeq ($(HARDWARE_VARIANT), Sanguino)
 VPATH += $(HARDWARE_DIR)/marlin/avr/variants/sanguino
@@ -292,12 +304,11 @@ ifeq ($(HARDWARE_VARIANT), Teensy)
 SRC = wiring.c
 VPATH += $(ARDUINO_INSTALL_DIR)/hardware/teensy/cores/teensy
 endif
-CXXSRC = WMath.cpp WString.cpp Print.cpp Marlin_main.cpp	\
-	MarlinSerial.cpp Sd2Card.cpp SdBaseFile.cpp SdFatUtil.cpp	\
-	SdFile.cpp SdVolume.cpp planner.cpp stepper.cpp \
-	temperature.cpp cardreader.cpp configuration_store.cpp \
-	watchdog.cpp SPI.cpp servo.cpp Tone.cpp ultralcd.cpp digipot_mcp4451.cpp \
-	dac_mcp4728.cpp vector_3.cpp qr_solve.cpp buzzer.cpp
+CXXSRC = WMath.cpp WString.cpp Print.cpp SPI.cpp Tone.cpp
+CXXSRC += $(wildcard *.cpp)
+ifeq ($(NEOPIXEL), 1)
+CXXSRC += Adafruit_NeoPixel.cpp
+endif
 ifeq ($(LIQUID_TWI2), 0)
 CXXSRC += LiquidCrystal.cpp
 else
@@ -308,6 +319,15 @@ endif
 ifeq ($(WIRE), 1)
 SRC += twi.c
 CXXSRC += Wire.cpp
+endif
+
+ifeq ($(U8GLIB), 1)
+SRC += u8g_ll_api.c u8g_bitmap.c u8g_clip.c u8g_com_null.c u8g_delay.c u8g_page.c u8g_pb.c u8g_pb16h1.c u8g_rect.c u8g_state.c u8g_font.c u8g_font_data.c
+endif
+
+ifeq ($(RELOC_WORKAROUND), 1)
+LD_PREFIX=-nodefaultlibs
+LD_SUFFIX=-lm -lgcc -lc -lgcc -L$(ARDUINO_INSTALL_DIR)/hardware/tools/avr/avr/lib/avr6 -l$(MCU)
 endif
 
 #Check for Arduino 1.0.0 or higher and use the correct source files for that version
@@ -357,25 +377,23 @@ endif
 CINCS = ${addprefix -I ,${VPATH}}
 CXXINCS = ${addprefix -I ,${VPATH}}
 
-# Compiler flag to set the C Standard level.
-# c89   - "ANSI" C
-# gnu89 - c89 plus GCC extensions
-# c99   - ISO C99 standard (not yet fully implemented)
-# gnu99 - c99 plus GCC extensions
-#CSTANDARD = -std=gnu99
+# Compiler flag to set the C/CPP Standard level.
+CSTANDARD = -std=gnu99
+CXXSTANDARD = -std=gnu++11
 CDEBUG = -g$(DEBUG)
 CWARN = -Wall -Wstrict-prototypes
 CTUNING = -funsigned-char -funsigned-bitfields -fpack-struct \
 	-fshort-enums -w -ffunction-sections -fdata-sections \
+	-flto \
 	-DARDUINO=$(ARDUINO_VERSION)
 ifneq ($(HARDWARE_MOTHERBOARD),)
 CTUNING += -DMOTHERBOARD=${HARDWARE_MOTHERBOARD}
 endif
 #CEXTRA = -Wa,-adhlns=$(<:.c=.lst)
-CEXTRA = -fno-use-cxa-atexit
+CEXTRA = -fno-use-cxa-atexit -fno-threadsafe-statics
 
-CFLAGS := $(CDEBUG) $(CDEFS) $(CINCS) -O$(OPT) $(CWARN) $(CEXTRA) $(CTUNING)
-CXXFLAGS :=         $(CDEFS) $(CINCS) -O$(OPT) -Wall    $(CEXTRA) $(CTUNING)
+CFLAGS := $(CDEBUG) $(CDEFS) $(CINCS) -O$(OPT) $(CWARN) $(CEXTRA) $(CTUNING) $(CSTANDARD)
+CXXFLAGS :=         $(CDEFS) $(CINCS) -O$(OPT) -Wall    $(CEXTRA) $(CTUNING) $(CXXSTANDARD)
 #ASFLAGS = -Wa,-adhlns=$(<:.S=.lst),-gstabs
 LDFLAGS = -lm
 
@@ -490,7 +508,7 @@ extcoff: $(TARGET).elf
 	# Link: create ELF output file from library.
 $(BUILD_DIR)/$(TARGET).elf: $(OBJ) Configuration.h
 	$(Pecho) "  CXX   $@"
-	$P $(CC) $(ALL_CXXFLAGS) -Wl,--gc-sections -o $@ -L. $(OBJ) $(LDFLAGS)
+	$P $(CC) $(LD_PREFIX) $(ALL_CXXFLAGS) -Wl,--gc-sections,--relax -o $@ -L. $(OBJ) $(LDFLAGS) $(LD_SUFFIX)
 
 $(BUILD_DIR)/%.o: %.c Configuration.h Configuration_adv.h $(MAKEFILE)
 	$(Pecho) "  CC    $<"

@@ -50,26 +50,58 @@
  *
  */
 
+/**
+ * Rev B    26 DEC 2016
+ *
+ * added pointer to a current Arduino IDE extension
+ *
+ */
+
+/**
+ * A useable Arduino IDE extension (board manager) can be found at
+ * https://github.com/Lauszus/Sanguino
+ *
+ * This extension has been tested on Arduino 1.6.12 & 1.8.0
+ *
+ * Here's the JSON path:
+ * https://raw.githubusercontent.com/Lauszus/Sanguino/master/package_lauszus_sanguino_index.json
+ *
+ * When installing select 1.0.2
+ *
+ * Installation instructions can be found at https://learn.sparkfun.com/pages/CustomBoardsArduino
+ * Just use the above JSON URL instead of Sparkfun's JSON.
+ *
+ * Once installed select the Sanguino board and then select the CPU.
+ *
+ */
+
 #ifndef __AVR_ATmega644__
-  #error "Oops!  Make sure you have 'SanguinoA' selected from the 'Tools -> Boards' menu."
+  #error "Oops!  Make sure you have 'Sanguino' selected from the 'Tools -> Boards' menu."
 #endif
 
 #define BOARD_NAME         "Alpha OMCA"
 
+//
+// Limit Switches
+//
+#define X_STOP_PIN          0
+#define Y_STOP_PIN          1
+#define Z_STOP_PIN          2
+
+//
+// Steppers
+//
 #define X_STEP_PIN         21
 #define X_DIR_PIN          20
 #define X_ENABLE_PIN       24
-#define X_STOP_PIN          0
 
 #define Y_STEP_PIN         23
 #define Y_DIR_PIN          22
 #define Y_ENABLE_PIN       24
-#define Y_STOP_PIN          1
 
 #define Z_STEP_PIN         26
 #define Z_DIR_PIN          25
 #define Z_ENABLE_PIN       24
-#define Z_STOP_PIN          2
 
 #define E0_STEP_PIN        28
 #define E0_DIR_PIN         27
@@ -83,10 +115,21 @@
 #define E2_DIR_PIN         -1 // 16
 #define E2_ENABLE_PIN      24
 
-#define SDSS               11
+//
+// Temperature Sensors
+//
+#define TEMP_0_PIN          0   // Analog Input (D27)
+
+//
+// Heaters / Fans
+//
+#define HEATER_0_PIN        4
+
 #define FAN_PIN             3
 
-#define HEATER_0_PIN        4
-#define TEMP_0_PIN          0 //D27   // MUST USE ANALOG INPUT NUMBERING NOT DIGITAL OUTPUT NUMBERING!!!!!!!!!
+//
+// Misc. Functions
+//
+#define SDSS               11
 
 /*  Unused (1) (2) (3) 4 5 6 7 8 9 10 11 12 13 (14) (15) (16) 17 (18) (19) (20) (21) (22) (23) 24 (25) (26) (27) 28 (29) (30) (31)  */

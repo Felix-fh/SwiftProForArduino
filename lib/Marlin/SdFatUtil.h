@@ -26,17 +26,13 @@
  *
  * This file is part of the Arduino Sd2Card Library
  */
-#include "Marlin.h"
-#if ENABLED(SDSUPPORT)
+#ifndef _SDFATUTIL_H_
+#define _SDFATUTIL_H_
 
-#ifndef SdFatUtil_h
-#define SdFatUtil_h
 /**
  * \file
  * \brief Useful utility functions.
  */
-#include "Marlin.h"
-#include "MarlinSerial.h"
 /** Store and print a string in flash memory.*/
 #define PgmPrint(x) SerialPrint_P(PSTR(x))
 /** Store and print a string in flash memory followed by a CR/LF.*/
@@ -51,7 +47,5 @@ namespace SdFatUtil {
 }
 
 using namespace SdFatUtil;  // NOLINT
-#endif  //#define SdFatUtil_h
 
-
-#endif
+#endif // _SDFATUTIL_H_

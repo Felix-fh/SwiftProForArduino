@@ -82,7 +82,7 @@
 
 // Say which 16 bit timers can be used and in what order
 #if defined(__AVR_ATmega1280__) || defined(__AVR_ATmega2560__)
-  //#define _useTimer1
+  //#define _useTimer1 // Timer 1 is used by the stepper ISR
   #define _useTimer3
   #define _useTimer4
   #if !HAS_MOTOR_CURRENT_PWM
@@ -117,8 +117,8 @@ typedef enum {
 
 #define Servo_VERSION           2     // software version of this library
 
-#define MIN_PULSE_WIDTH       600 //544     // the shortest pulse sent to a servo
-#define MAX_PULSE_WIDTH      2400	//2400     // the longest pulse sent to a servo
+#define MIN_PULSE_WIDTH       544     // the shortest pulse sent to a servo
+#define MAX_PULSE_WIDTH      2400     // the longest pulse sent to a servo
 #define DEFAULT_PULSE_WIDTH  1500     // default pulse width when servo is attached
 #define REFRESH_INTERVAL    20000     // minimum time to refresh servos in microseconds
 
